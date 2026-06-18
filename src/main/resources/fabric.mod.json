@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "jsmacros-ruby",
+  "version": "${version}",
+  "name": "JsMacros Ruby",
+  "description": "JRuby scripting language support for JsMacros Reloaded.",
+  "authors": [
+    "Ally Piechowski"
+  ],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "jsmacros": [
+      {
+        "adapter": "kotlin",
+        "value": "grepsedawk.jsmacros.jruby.client.JRubyExtension"
+      }
+    ]
+  },
+  "jars": [
+    {
+      "file": "META-INF/jars/${jruby_jar}"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.0",
+    "minecraft": [
+      "${minecraft_version}"
+    ],
+    "jsmacros": ">=2.0.0 <3.0.0",
+    "fabric-language-kotlin": "*"
+  }
+}

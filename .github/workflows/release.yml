@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      MODRINTH_PROJECT: EQoulhLS                      # jsmacros-ruby (the API needs the ID, not the slug)
+      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}   # job-level so the skip-guard below works
+    steps:
+      - uses: actions/checkout@v4          # lands on the tag's commit — builds exactly what was tagged
+
+      # See dev.yml: Gradle launches under JDK 21, toolchain compiles with JDK 25.
+      - name: Set up JDK 25 (toolchain)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - name: Set up JDK 21 (Gradle launcher)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-overwrite-existing: true
+
+      - name: Resolve version from tag
+        id: ver
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VER="${TAG#v}"                 # strip leading v -> the mod version
+          {
+            echo "tag=$TAG"
+            echo "mod_version=$VER"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: ./gradlew build -Pversion=${{ steps.ver.outputs.mod_version }}
+
+      - name: Upload jar to the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          V="${{ steps.ver.outputs.mod_version }}"
+          shopt -s nullglob
+          FILES=(build/libs/jsmacros-ruby-*-"$V".jar)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "::error::No build artifact matched version $V"; exit 1
+          fi
+          gh release upload "${{ steps.ver.outputs.tag }}" "${FILES[@]}" --clobber
+
+      - name: Publish to Modrinth
+        if: env.MODRINTH_TOKEN != ''
+        run: ./gradlew publishMods -Pversion=${{ steps.ver.outputs.mod_version }}
+
+      # mod-publish-plugin can't set the per-version environment, so patch it after upload.
+      - name: Mark Modrinth version as client-side
+        if: env.MODRINTH_TOKEN != ''
+        shell: bash
+        env:
+          V: ${{ steps.ver.outputs.mod_version }}
+        run: |
+          set -euo pipefail
+          VID=$(curl -fsS -H "Authorization: $MODRINTH_TOKEN" \
+                "https://api.modrinth.com/v3/project/$MODRINTH_PROJECT/version" \
+            | python3 -c "import sys,json,os; vs=json.load(sys.stdin); pfx=os.environ['V']+'+'; print(next((v['id'] for v in vs if v['version_number'].startswith(pfx)), ''))")
+          if [ -z "$VID" ]; then
+            echo "::warning::No Modrinth version matching $V for project $MODRINTH_PROJECT"; exit 0
+          fi
+          curl -fsS -X PATCH \
+            -H "Authorization: $MODRINTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"environment":"client_only"}' \
+            "https://api.modrinth.com/v3/version/$VID"
+          echo "Set $MODRINTH_PROJECT version $VID ($V) to client_only"

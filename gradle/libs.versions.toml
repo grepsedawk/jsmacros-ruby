@@ -1,0 +1,31 @@
+[versions]
+java = "25"
+minecraft = "26.1.2"
+fabric_loader = "0.19.3"
+
+unimined = "1.4.2-SNAPSHOT"
+kotlin = "2.4.0"
+fabric_language_kotlin = "1.13.12+kotlin.2.4.0"
+
+jruby = "10.1.0.0"
+
+jsmacros_core = "2.0.0+26.1.2-fabric"
+jb_annotations = "26.0.2"
+
+junit = "5.11.4"
+
+mod_publish = "1.1.0"
+
+[libraries]
+fabric_loader = { module = "net.fabricmc:fabric-loader", version.ref = "fabric_loader" }
+fabric_language_kotlin = { module = "net.fabricmc:fabric-language-kotlin", version.ref = "fabric_language_kotlin" }
+jruby = { module = "org.jruby:jruby-complete", version.ref = "jruby" }
+jsmacros_core = { module = "maven.modrinth:jsmacros-reloaded", version.ref = "jsmacros_core" }
+jb_annotations = { module = "org.jetbrains:annotations", version.ref = "jb_annotations" }
+junit_jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit_platform_launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.11.4" }
+
+[plugins]
+unimined = { id = "xyz.wagyourtail.unimined", version.ref = "unimined" }
+kotlin_jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+mod_publish = { id = "me.modmuss50.mod-publish-plugin", version.ref = "mod_publish" }
